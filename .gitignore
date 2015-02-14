@@ -1,0 +1,92 @@
+*.mode*
+*.pbxuser
+*.xcworkspace
+xcuserdata/
+*.build
+
+build/
+obj/
+*.o
+openFrameworks.a
+openFrameworksDebug.a
+openFrameworksUniversal.a
+*.app
+
+#rule to avoid non-official addons going into git
+#see addons/.gitignore
+#addons/**
+
+#NMM:
+apps/*/*/bin/data/img_cache
+
+#codeblocks files
+apps/*/*/*.layout
+apps/*/*/*.depend
+apps/*/*/bin/clickToLaunch*
+apps/*/*/bin/libs
+apps/*/*/obj
+
+#rule to avoid non-official apps going into git
+#see apps/.gitignore
+#apps
+
+#codeblocks OF lib files
+libs/openFrameworksCompiled/project/*/*.depend
+libs/openFrameworksCompiled/project/*/*.layout
+
+#linux temporary files
+*~
+
+#eclipse build folders
+#Mac OS X
+addons/Debug Mac OS X
+addons/Release Mac OS X
+libs/openFrameworks/Debug Mac OS X
+libs/openFrameworks/Release Mac OS X
+apps/*/*/Debug Mac OS X
+apps/*/*/Release Mac OS X
+.DS_Store
+
+#xcode
+*.perspectivev3
+*.pbxuser
+
+
+#Linux
+addons/Debug Linux
+addons/Release Linux
+libs/openFrameworks/Debug Linux
+libs/openFrameworks/Release Linux
+apps/*/*/Debug Linux
+apps/*/*/Release Linux
+apps/*/*/Debug Linux64
+apps/*/*/Release Linux64
+
+*/bin/*.dll
+*/x64
+*.exe
+*.ilk
+*.pdb
+*.sdf
+*.suo
+
+#Android
+addons/Debug Android
+addons/Release Android
+libs/openFrameworks/Debug Android
+libs/openFrameworks/Release Android
+libs/openFrameworks/Release
+libs/openFrameworks/Debug
+libs/openFrameworks/Release_arm7
+apps/*/*/Debug Android
+apps/*/*/Release Android
+apps/*/*/Debug
+apps/*/*/Release
+apps/*/*/Release_arm7
+apps/*/*/test link
+apps/*/*/obj
+#apps/*/*/bin
+
+.csettings
+*.lib
+*.opensdf
