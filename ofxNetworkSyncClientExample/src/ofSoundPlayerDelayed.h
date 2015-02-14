@@ -24,6 +24,7 @@ public:
 		if(delay <= 0){
 			ofSoundPlayer::play();
 		}else{
+			ofLogVerbose("ofSoundPlayerDelayed") << "play sound after " << delay << " ms.";
 			playTime = ofGetElapsedTimeMillis()+delay;
 			startThread(true);
 		}

@@ -25,8 +25,8 @@ void ofApp::update(){
 void ofApp::onMessageComing(string & message){
 	const string messagePlay = "PLAY ";
 	if(message.find(messagePlay) == 0 && client.isCalibrated()){
-		int time = ofToInt(message.substr(messagePlay.length()+1));
-		player.play(time);
+		int time = ofToInt(message.substr(messagePlay.length()));
+		player.play(time - client.getSyncedElapsedTimeMillis());
 	}
 }
 

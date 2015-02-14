@@ -14,7 +14,7 @@
 #include "ofxNetworkSyncConstants.h"
 #include "ofxNetworkSyncUdp.h"
 
-class ofxNetworkSyncClient : public ofThread{
+class ofxNetworkSyncClient : ofThread{
 	string serverIp;
 	int serverPort;
 	ofxTCPClient client;
@@ -95,7 +95,7 @@ public:
 		ofDrawBitmapString(ostr.str(), 50, 50);
 	}
 	
-	unsigned long long getSyncedElapsedTimeMillis(){
+	long long getSyncedElapsedTimeMillis(){
 		return ofGetElapsedTimeMillis() - timeDifference;
 	}
 	float getLatency(){
@@ -119,13 +119,11 @@ protected:
 		while (isThreadRunning() && isConnected()) {
 			string recv = client.receive();
 			if(recv.length() > 0){
-				cout << "receive!!" << recv << endl;
 				ofNotifyEvent(messageReceived, recv, this);
 			}
 		}
 	}
 	void onMessageReceived(string & message){
-		cout << "received message:" << message << endl;
 		if(message.find(MESSAGE_HEADER_CLIENT_ID) == 0){
 			ofLogVerbose("ofxNetworkSyncClient") << "set client ID: " << clientId;
 			clientId = ofToInt(message.substr(MESSAGE_HEADER_CLIENT_ID.length()+1));
