@@ -19,9 +19,9 @@ void ofApp::setup(){
 void ofApp::update(){
 }
 
-void ofApp::onServerFound(string & addr){
+void ofApp::onServerFound(IpAndPort & info){
 	finder.close();
-	if(client.setup(addr, 12345)){
+	if(client.setup(info.ip, info.port)){
 		ofAddListener(client.messageReceived, this, &ofApp::onMessageReceived);
 	}
 }

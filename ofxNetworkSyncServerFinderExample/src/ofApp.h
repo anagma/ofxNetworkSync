@@ -22,7 +22,7 @@ class ofApp : public ofBaseApp{
 		void gotMessage(ofMessage msg);
 	
 	void onMessageReceived(string & message);
-	void onServerFound(string & addr);
+	void onServerFound(IpAndPort & info);
 	
 	ofxNetworkSyncServerFinder finder;
 	ofxNetworkSyncClient client;
