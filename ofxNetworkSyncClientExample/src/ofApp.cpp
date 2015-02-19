@@ -8,18 +8,23 @@ void ofApp::setup(){
 	ofSetLogLevel(OF_LOG_VERBOSE);
 	
 	if(client.setup("localhost", 12345)){
-		
 		ofAddListener(client.messageReceived, this, &ofApp::onMessageComing);
-		
-		player.loadSound("sound/1085.mp3");
-		player.setPan(-1);
-		player.setLoop(false);
 	}
+	player.loadSound("sound/1085.mp3");
+	player.setPan(-1);
+	player.setLoop(false);
 
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
+	if(! client.isConnected()){
+		// retry
+		if(client.setup("localhost", 12345)){
+			ofAddListener(client.messageReceived, this, &ofApp::onMessageComing);
+		}
+		
+	}
 }
 
 void ofApp::onMessageComing(string & message){

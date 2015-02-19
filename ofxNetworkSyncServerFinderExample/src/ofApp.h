@@ -21,10 +21,10 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
 	
-	void onMessageComing(string & message);
+	void onMessageReceived(string & message);
+	void onServerFound(string & addr);
 	
+	ofxNetworkSyncServerFinder finder;
 	ofxNetworkSyncClient client;
 	ofSoundPlayerDelayed player;
-	
-	int retryCount;
 };

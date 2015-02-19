@@ -8,21 +8,33 @@
 
 #include "ofxNetworkSyncServer.h"
 
-ofxNetworkSyncServer::ofxNetworkSyncServer(){
+ofxNetworkSyncServer::ofxNetworkSyncServer() : tcpServer(NULL){
 	
 }
 ofxNetworkSyncServer::~ofxNetworkSyncServer(){
 	close();
 }
 
-bool ofxNetworkSyncServer::setup(int tcpPort, bool _bAutoCalibration){
+bool ofxNetworkSyncServer::setup(int tcpPort, bool _bAutoCalibration, int _finderRecvPort, int _finderSendPort){
 	
 	bAutoCalibration = _bAutoCalibration;
 	clientStates.clear();
 	tcpLastConnectionID = -1;
+	finderRecvPort = _finderRecvPort;
+	finderSendPort = _finderSendPort;
 	
-	if(tcpServer.setup(tcpPort, false)){
+	tcpServer = new ofxTCPServer();
+	if(tcpServer->setup(tcpPort, false)){
 		ofLogVerbose("ofxNetworkSyncServer") << "Server is waiting on port: " << tcpPort;
+		if(finderResponder.Create()){
+			if(finderResponder.Bind(finderRecvPort)){
+				ofLogVerbose("ofxNetworkSyncServer") << "Finder Responder is waiting on port: " << finderRecvPort;
+				startThread(true);
+			}else{
+				ofLogError("ofxNetworkSyncServer") << "failed to create Finder Responder on port: " << finderRecvPort;
+				return false;
+			}
+		}
 		return true;
 	}else{
 		ofLogError("ofxNetworkSyncServer") << "Failed to start server on port: " << tcpPort;
@@ -31,28 +43,32 @@ bool ofxNetworkSyncServer::setup(int tcpPort, bool _bAutoCalibration){
 }
 void ofxNetworkSyncServer::close(){
 	ofLogVerbose("ofxNetworkSyncServer") << "close server... bye";
-	tcpServer.close();
-	for (auto & state : clientStates) {
-		state->close();
-		delete state;
+	if(tcpServer != NULL){
+		tcpServer->close();
+		for (auto & state : clientStates) {
+			state->close();
+			delete state;
+		}
+		clientStates.clear();
+		delete tcpServer;
 	}
-	clientStates.clear();
 	tcpLastConnectionID = -1;
+	finderResponder.Close();
 }
 void ofxNetworkSyncServer::update(){
-	if(! tcpServer.isConnected() || tcpServer.getLastID() <= 0){
+	if(tcpServer == NULL || ! tcpServer->isConnected() || tcpServer->getLastID() <= 0){
 		// no connection
 		return;
 	}
 	
-	if(tcpLastConnectionID != tcpServer.getLastID()){
-		int clientId = tcpServer.getLastID()-1;
-		ofLogVerbose("ofxNetworkSyncServer") << "New Connection established: #"<< clientId << " " << tcpServer.getClientIP(clientId) << ":" << tcpServer.getClientPort(clientId);
+	if(tcpLastConnectionID != tcpServer->getLastID()){
+		int clientId = tcpServer->getLastID()-1;
+		ofLogVerbose("ofxNetworkSyncServer") << "New Connection established: #"<< clientId << " " << tcpServer->getClientIP(clientId) << ":" << tcpServer->getClientPort(clientId);
 		// new connection
-		clientStates.push_back(new ofxNetworkSyncClientState(this, &tcpServer, clientId));
+		clientStates.push_back(new ofxNetworkSyncClientState(this, tcpServer, clientId));
 		ofNotifyEvent(newClientConnected, clientId, this);
 		
-		tcpLastConnectionID = tcpServer.getLastID();
+		tcpLastConnectionID = tcpServer->getLastID();
 		
 		// New Client will be calibrated automatically.
 		if(bAutoCalibration){
@@ -66,8 +82,8 @@ void ofxNetworkSyncServer::update(){
 void ofxNetworkSyncServer::drawStatus(){
 	ostringstream ostr("");
 	
-	if(tcpServer.isConnected()){
-		ostr << "Server is waiting on port:" << tcpServer.getPort() << endl;
+	if(tcpServer != NULL && tcpServer->isConnected()){
+		ostr << "Server is waiting on port:" << tcpServer->getPort() << endl;
 	}else{
 		ostr << "failed to start server" << endl;
 	}
@@ -99,4 +115,26 @@ void ofxNetworkSyncServer::drawStatus(){
 void ofxNetworkSyncServer::onClientMessageReceived(int clientId, string message){
 	ofxNetworkSyncServerMessage m = {clientId, message};
 	ofNotifyEvent(messageReceived, m, this);
+}
+void ofxNetworkSyncServer::threadedFunction(){
+	if(tcpServer != NULL){
+		while(isThreadRunning()){
+			char recv[16];
+			int num = finderResponder.Receive(recv, sizeof(recv));
+			if(num > 0){
+				string recvMessage = recv;
+				if(recvMessage == UDP_MESSAGE_HELLO){
+					char addr[16];
+					if(finderResponder.GetRemoteAddr(addr)){
+						ofxUDPManager responder;
+						string sendMessage = UDP_MESSAGE_HELLO + " " + ofToString(tcpServer->getPort());
+						responder.Create();
+						responder.Connect(addr, finderSendPort);
+						responder.Send(sendMessage.c_str(), sendMessage.length());
+						responder.Close();
+					}
+				}
+			}
+		}
+	}
 }

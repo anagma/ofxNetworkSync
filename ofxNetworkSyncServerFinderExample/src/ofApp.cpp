@@ -2,45 +2,40 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+	
 	ofBackground(0);
 	ofSetVerticalSync(true);
 	ofSetLogLevel(OF_LOG_VERBOSE);
 	
-	if(server.setup(12345)){
-		player.loadSound("sound/1085.mp3");
-		player.setPan(1);
-		player.setLoop(false);
-	}
+	player.loadSound("sound/1085.mp3");
+	player.setPan(-1);
+	player.setLoop(false);
 
+	ofAddListener(finder.serverFound, this, &ofApp::onServerFound);
+	finder.setup();
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
-	if(server.isConnected()){
-		server.update();
-		
-		if(server.hasClients()){
-			if (ofGetElapsedTimeMillis()%10000 < lastUpdateTime%10000) {
-				bool bPlay = false;
-				for (auto & client : server.getClients()) {
-					if(client->isCalibrated()){
-						bPlay = true;
-						client->send("PLAY "+ofToString(ofGetElapsedTimeMillis()+1000));
-					}
-				}
-				if(bPlay){
-					player.play(1000);
-				}
-			}
-		}
-		
-		lastUpdateTime = ofGetElapsedTimeMillis();
+}
+
+void ofApp::onServerFound(string & addr){
+	finder.close();
+	if(client.setup(addr, 12345)){
+		ofAddListener(client.messageReceived, this, &ofApp::onMessageReceived);
+	}
+}
+void ofApp::onMessageReceived(string & message){
+	const string messagePlay = "PLAY ";
+	if(message.find(messagePlay) == 0 && client.isCalibrated()){
+		int time = ofToInt(message.substr(messagePlay.length()));
+		player.play(time - client.getSyncedElapsedTimeMillis());
 	}
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-	server.drawStatus();
+	client.drawStatus();
 }
 
 //--------------------------------------------------------------

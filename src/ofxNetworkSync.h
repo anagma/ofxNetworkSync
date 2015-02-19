@@ -11,5 +11,6 @@
 
 #include "ofxNetworkSyncServer.h"
 #include "ofxNetworkSyncClient.h"
+#include "ofxNetworkSyncServerFinder.h"
 
 #endif

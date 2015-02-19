@@ -9,8 +9,13 @@
 #ifndef toposcan_4screen_ofxNetworkSyncConstants_h
 #define toposcan_4screen_ofxNetworkSyncConstants_h
 
-const int SERVER_SEND_PORT_OFFSET=15000;
-const int SERVER_RECV_PORT_OFFSET=17000;
+const int SERVER_SEND_PORT_OFFSET		=15000;
+const int SERVER_RECV_PORT_OFFSET		=17000;
+const int FINDER_SEND_PORT_DEFAULT		=19000;
+const int FINDER_RESPOND_PORT_DEFAULT	=19001;
+
+const int SERVER_FIND_INTERVAL	= 100;
+const int SERVER_FIND_TIMEOUT	= 1000;
 
 
 const string MESSAGE_HEADER_CLIENT_ID	= "id";
@@ -29,7 +34,13 @@ enum ofxNetworkSyncCalibrationStep{
 
 const string UDP_MESSAGE_SEND	= "send";
 const string UDP_MESSAGE_REPLY	= "reply";
+const string UDP_MESSAGE_HELLO	= "hello";
 
 const int NUM_MEASUREMENT_DEFAULT = 10;
+
+typedef struct{
+	string ip;
+	int port;
+} IpAndPort;
 
 #endif

@@ -30,6 +30,8 @@ class ofxNetworkSyncClient : ofThread{
 	
 public:
 	ofEvent<string> messageReceived;
+	ofEvent<void> connectionLost;
+	ofEvent<void> calibrated;
 
 	ofxNetworkSyncClient();
 	~ofxNetworkSyncClient();
@@ -38,6 +40,15 @@ public:
 	bool connect();
 	bool close();
 	void drawStatus();
+	
+	// network utils
+	int getRemotePort(){
+		client.getPort();
+	}
+	string getRemoteHost(){
+		client.getIP();
+	}
+	
 	
 	long long getSyncedElapsedTimeMillis(){
 		if(! isCalibrated()){

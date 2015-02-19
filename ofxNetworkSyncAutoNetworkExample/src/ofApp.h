@@ -4,6 +4,11 @@
 #include "ofxNetworkSync.h"
 #include "ofSoundPlayerDelayed.h"
 
+#define SYNC_TCP_PORT 12345
+#define FINDER_TIMEOUT 10000
+#define SOUND_PLAYER_DELAY 1000
+#define SOUND_PLAYER_INTERVAL 10000
+
 class ofApp : public ofBaseApp{
 
 	public:
@@ -20,11 +25,19 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
-	
-	void onMessageComing(string & message);
-	
+
+	void onMessageReceived(string & message);
+	void onServerFound(IpAndPort & info);
+	void onClientConnectionLost();
+
+	ofxNetworkSyncServerFinder finder;
 	ofxNetworkSyncClient client;
+	ofxNetworkSyncServer server;
 	ofSoundPlayerDelayed player;
 	
-	int retryCount;
+	int lastUpdateTime, finderStartTime;
+	
+	string statusText;
+	int serverPortOffset;
+		
 };

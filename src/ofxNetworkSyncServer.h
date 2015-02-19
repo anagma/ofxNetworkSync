@@ -19,7 +19,7 @@ typedef struct{
 	string message;
 }ofxNetworkSyncServerMessage;
 
-class ofxNetworkSyncServer{
+class ofxNetworkSyncServer : ofThread{
 public:
 	ofEvent<ofxNetworkSyncServerMessage> messageReceived;
 	ofEvent<int> newClientConnected;
@@ -27,7 +27,8 @@ public:
 	ofxNetworkSyncServer();
 	~ofxNetworkSyncServer();
 	
-	bool setup(int tcpPort, bool _bAutoCalibration=true);
+	bool setup(int tcpPort, bool _bAutoCalibration=true,
+			   int _finderRecvPort=FINDER_SEND_PORT_DEFAULT, int _finderSendPort=FINDER_RESPOND_PORT_DEFAULT);
 	void close();
 	void update();
 	
@@ -44,7 +45,10 @@ public:
 		return bAutoCalibration;
 	}
 	bool isConnected(){
-		return tcpServer.isConnected();
+		if(tcpServer == NULL){
+			return false;
+		}
+		return tcpServer->isConnected();
 	}
 	bool hasClients(){
 		return clientStates.size() > 0;
@@ -52,11 +56,16 @@ public:
 	
 	void onClientMessageReceived(int clientId, string message);
 protected:
-	ofxTCPServer tcpServer;
+	ofxTCPServer * tcpServer;
+	ofxUDPManager finderResponder;
+	int finderRecvPort;
+	int finderSendPort;
 	int tcpLastConnectionID;
 	vector<ofxNetworkSyncClientState *> clientStates;
 	
 	bool bAutoCalibration;
+	
+	void threadedFunction();
 
 };
 

@@ -37,6 +37,7 @@ bool ofxNetworkSyncClient::connect(){
 }
 bool ofxNetworkSyncClient::close(){
 	ofLogVerbose("ofxNetworkSyncClient") << "Close connection";
+	stopThread();
 	return client.close();
 }
 
@@ -74,11 +75,16 @@ void ofxNetworkSyncClient::drawStatus(){
 }
 
 void ofxNetworkSyncClient::threadedFunction(){
-	while (isThreadRunning() && isConnected()) {
-		string recv = client.receive();
-		if(recv.length() > 0){
-			ofNotifyEvent(messageReceived, recv, this);
+	while (isThreadRunning()) {
+		if(isConnected()){
+			string recv = client.receive();
+			if(recv.length() > 0){
+				ofNotifyEvent(messageReceived, recv, this);
+			}
+		}else{
+			ofNotifyEvent(connectionLost, this);
 		}
+		ofSleepMillis(10);
 	}
 }
 void ofxNetworkSyncClient::onMessageReceived(string & message){
@@ -106,6 +112,8 @@ void ofxNetworkSyncClient::onMessageReceived(string & message){
 		timeDifference = round(calibrator.getTimeDifference() - latency);
 		ofLogVerbose("ofxNetworkSyncClient") << "time difference calicurated: " << timeDifference;
 		ofLogVerbose("ofxNetworkSyncClient") << "done calibration";
+		
+		ofNotifyEvent(calibrated, this);
 		
 		step = CALIBRATED;
 	}

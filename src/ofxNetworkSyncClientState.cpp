@@ -60,6 +60,7 @@ void ofxNetworkSyncClientState::threadedFunction(){
 			ofNotifyEvent(messageReceived, recv, this);
 			server->onClientMessageReceived(clientId, recv);
 		}
+		ofSleepMillis(10);
 	}
 	
 }
