@@ -20,7 +20,7 @@ ofxNetworkSyncClientState::ofxNetworkSyncClientState(ofxNetworkSyncServer * _ser
 	startThread(true);
 }
 ofxNetworkSyncClientState::~ofxNetworkSyncClientState(){
-	
+	close();
 }
 
 void ofxNetworkSyncClientState::startCalibration(){
@@ -34,8 +34,10 @@ void ofxNetworkSyncClientState::stopCalibration(){
 	
 	float result = calibrator.getLatency();
 	ofLogVerbose("ofxNetworkSyncClientState#"+ofToString(clientId)) << "latency is: " << round(result);
+	ofLogVerbose("ofxNetworkSyncClientState#"+ofToString(clientId)) << "sending time offset: " << server->getTimeOffsetMillis();
 	
 	send(MESSAGE_HEADER_RESULT+MESSAGE_HEADER_SEPARATOR+ofToString(round(result)));
+	send(MESSAGE_HEADER_TIME_OFFSET+MESSAGE_HEADER_SEPARATOR+ofToString(server->getTimeOffsetMillis()));
 	step = CALIBRATED;
 }
 
@@ -43,7 +45,11 @@ void ofxNetworkSyncClientState::stopCalibration(){
 bool ofxNetworkSyncClientState::close(){
 	if(isThreadRunning()){
 		stopThread();
+		waitForThread();
 	}
+	calibrator.close();
+	server = NULL;
+	tcpServer = NULL;
 }
 void ofxNetworkSyncClientState::send(string message){
 	if(isConnected()){
@@ -54,7 +60,15 @@ void ofxNetworkSyncClientState::send(string message){
 }
 
 void ofxNetworkSyncClientState::threadedFunction(){
-	while(isThreadRunning() && isConnected()){
+	while(isThreadRunning()){
+		if(step == CALIBRATING && calibrator.isFinishMeasuremant()){
+			stopCalibration();
+		}
+		
+		if(! isConnected()){
+			ofNotifyEvent(clientDisconnected, clientId, this);
+			break;
+		}
 		string recv = tcpServer->receive(clientId);
 		if(recv.length() > 0){
 			ofNotifyEvent(messageReceived, recv, this);
@@ -69,10 +83,31 @@ void ofxNetworkSyncClientState::onMessageReceived(string & message){
 		ofLogVerbose("ofxNetworkSyncClientState#"+ofToString(clientId)) << "responce received";
 		step = CALIBRATING;
 		calibrator.setup(ip, SERVER_RECV_PORT_OFFSET+clientId, SERVER_SEND_PORT_OFFSET+clientId);
-		ofAddListener(calibrator.finishMeasuremnt, this, &ofxNetworkSyncClientState::stopCalibration);
+//		ofAddListener(calibrator.finishMeasuremnt, this, &ofxNetworkSyncClientState::stopCalibration);
 	}else if(message == MESSAGE_START_FAILED){
 		ofLogError("ofxNetworkSyncClientState#"+ofToString(clientId)) << "start calibration failed";
 		step = WAIT;
 	}
 }
 
+
+
+bool ofxNetworkSyncClientState::isConnected(){
+	return tcpServer->isClientConnected(clientId);
+}
+
+bool ofxNetworkSyncClientState::isCalibrated(){
+	return isConnected() && step == CALIBRATED;
+}
+bool ofxNetworkSyncClientState::isCalibrating(){
+	return isConnected() && calibrator.isRunning();
+}
+string ofxNetworkSyncClientState::getIpAddr(){
+	return ip;
+}
+int ofxNetworkSyncClientState::getPort(){
+	return port;
+}
+int ofxNetworkSyncClientState::getClientID(){
+	return clientId;
+}

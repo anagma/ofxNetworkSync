@@ -21,6 +21,7 @@ const int SERVER_FIND_TIMEOUT	= 1000;
 const string MESSAGE_HEADER_CLIENT_ID	= "id";
 const string MESSAGE_HEADER_RESULT		= "result";
 const string MESSAGE_HEADER_SEPARATOR	= " ";
+const string MESSAGE_HEADER_TIME_OFFSET = "timeoffset ";
 
 const string MESSAGE_START_REQUEST		= "calibratin_start";
 const string MESSAGE_START_RESPONCE		= "calibratin_start_ok";
@@ -36,7 +37,7 @@ const string UDP_MESSAGE_SEND	= "send";
 const string UDP_MESSAGE_REPLY	= "reply";
 const string UDP_MESSAGE_HELLO	= "hello";
 
-const int NUM_MEASUREMENT_DEFAULT = 10;
+const int NUM_MEASUREMENT_DEFAULT = 30;
 
 typedef struct{
 	string ip;

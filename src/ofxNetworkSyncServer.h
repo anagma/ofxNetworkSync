@@ -32,40 +32,37 @@ public:
 	void close();
 	void update();
 	
-	void drawStatus();
+	void drawStatus(int x=50, int y=50);
 	
-	vector<ofxNetworkSyncClientState *> & getClients(){
-		return clientStates;
-	}
+	vector<ofxNetworkSyncClientState *> & getClients();
 	
-	void setAutoCalibration(bool b){
-		bAutoCalibration = b;
-	}
-	bool getAutoCalibration(){
-		return bAutoCalibration;
-	}
-	bool isConnected(){
-		if(tcpServer == NULL){
-			return false;
-		}
-		return tcpServer->isConnected();
-	}
-	bool hasClients(){
-		return clientStates.size() > 0;
-	}
+	void setAutoCalibration(bool b);
+	bool getAutoCalibration();
+	bool isConnected();
+	bool hasClients();
 	
 	void onClientMessageReceived(int clientId, string message);
+	
+	void setTimeOffsetMillis(long long _timeOffset);
+	long long getSyncedElapsedTimeMillis();
+	long long getTimeOffsetMillis();
+	
+	void startRecalibration();
 protected:
 	ofxTCPServer * tcpServer;
 	ofxUDPManager finderResponder;
 	int finderRecvPort;
 	int finderSendPort;
-	int tcpLastConnectionID;
+	//int tcpLastConnectionID;
+	
+	int timeOffset;
+	
 	vector<ofxNetworkSyncClientState *> clientStates;
 	
 	bool bAutoCalibration;
 	
 	void threadedFunction();
+	void onClientDisconnected(int & clientId);
 
 };
 

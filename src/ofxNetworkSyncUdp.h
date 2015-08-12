@@ -34,6 +34,7 @@ public:
 protected:
 	ofxUDPManager udpRecv, udpSend;
 	bool bConnected;
+	void closeConnection();
 	
 	void threadedFunction();
 };
@@ -44,9 +45,10 @@ class ofxNetworkSyncUdpSender : public ofxNetworkSyncUdpBase{
 	
 	list<int> latencies;
 	int numMeasurement;
+	bool bFinishMeasurement;
 	
 public:
-	ofEvent<void> finishMeasuremnt;
+//	ofEvent<void> finishMeasuremnt;
 	
 	bool setup(string host, int recvPort, int sendPort, int _numMeasurement=NUM_MEASUREMENT_DEFAULT);
 	list<int> & getLatencies(){
@@ -55,6 +57,9 @@ public:
 	float getLatency();
 	int getLatencyResponceCount(){
 		return latencies.size();
+	}
+	bool isFinishMeasuremant(){
+		return bFinishMeasurement;
 	}
 protected:
 	void threadedFunction();

@@ -12,25 +12,27 @@ bool ofxNetworkSyncUdpBase::setup(string host, int recvPort, int sendPort){
 	
 	// ===================== CREATE RECEIVER
 	if(! udpRecv.Create()){
-		ofLogError("ofxNetworkSyncLatencyCalibrator") << "Failed to create udp receiver";
+		ofLogError("ofxNetworkSyncUdpBase") << "Failed to create udp receiver";
 		return false;
 	}
 	if (udpRecv.Bind(recvPort)) {
-		ofLogVerbose("ofxNetworkSyncLatencyCalibrator") << "Binded udp receiver on port: " << recvPort;
+		udpRecv.SetNonBlocking(true);
+		ofLogVerbose("ofxNetworkSyncUdpBase") << "Binded udp receiver on port: " << recvPort;
 	}else{
-		ofLogError("ofxNetworkSyncLatencyCalibrator") << "Failed to bind on port: " << recvPort;
+		ofLogError("ofxNetworkSyncUdpBase") << "Failed to bind on port: " << recvPort;
 		return false;
 	}
 	
 	// ===================== CREATE SENDER
 	if(! udpSend.Create()){
-		ofLogError("ofxNetworkSyncLatencyCalibrator") << "Failed to create udp sender";
+		udpSend.SetNonBlocking(true);
+		ofLogError("ofxNetworkSyncUdpBase") << "Failed to create udp sender";
 		return false;
 	}
 	if(udpSend.Connect(host.c_str(), sendPort)){
-		ofLogVerbose("ofxNetworkSyncLatencyCalibrator") << "Connected udp sender to: " << host << ":" << sendPort;
+		ofLogVerbose("ofxNetworkSyncUdpBase") << "Connected udp sender to: " << host << ":" << sendPort;
 	}else{
-		ofLogError("ofxNetworkSyncLatencyCalibrator") << "Failed to connect to server: " << host << ":" << sendPort;
+		ofLogError("ofxNetworkSyncUdpBase") << "Failed to connect to server: " << host << ":" << sendPort;
 		close(); // close receiver too.
 		return false;
 	}
@@ -44,14 +46,17 @@ bool ofxNetworkSyncUdpBase::setup(string host, int recvPort, int sendPort){
 }
 
 void ofxNetworkSyncUdpBase::close(){
-	ofLogVerbose("ofxNetworkSyncLatencyCalibrator") << "Close down udp connection";
-	udpRecv.Close();
-	udpSend.Close();
+	ofLogVerbose("ofxNetworkSyncUdpBase") << "Close down udp connection";
+	closeConnection();
 	if(isThreadRunning()){
 		stopThread();
+		waitForThread(true, 1000);
 	}
 }
-
+void ofxNetworkSyncUdpBase::closeConnection(){
+	udpRecv.Close();
+	udpSend.Close();
+}
 void ofxNetworkSyncUdpBase::threadedFunction(){
 	
 }
@@ -60,13 +65,15 @@ void ofxNetworkSyncUdpBase::threadedFunction(){
 
 bool ofxNetworkSyncUdpSender::setup(string host, int recvPort, int sendPort, int _numMeasurement){
 	numMeasurement = _numMeasurement;
+//	ofAddListener(finishMeasuremnt, this, &ofxNetworkSyncUdpSender::onFinishMeasuremnt);
 	latencies.clear();
+	bFinishMeasurement = false;
 	return ofxNetworkSyncUdpBase::setup(host, recvPort, sendPort);
 }
 float ofxNetworkSyncUdpSender::getLatency(){
 	// calculate...
 	if(getLatencyResponceCount() < 2){
-		ofLogError("ofxNetworkSyncLatencyCalibrator") << "Data is not enough... " << getLatencyResponceCount();
+		ofLogError("ofxNetworkSyncUdpSender") << "Data is not enough... " << getLatencyResponceCount();
 		return 0;
 	}
 	
@@ -90,44 +97,47 @@ void ofxNetworkSyncUdpSender::threadedFunction(){
 	char messRecv[messLength];
 	bool bSending = false;
 	int lastSendTime = ofGetElapsedTimeMillis();
+	bool bFinish = false;
 	
 	while(isThreadRunning()){
 		
 		if(! isConnected()){
-			ofLogError("ofxNetworkSyncLatencyCalibrator") << "Lost connection unexpectedly";
-			close();
+			ofLogError("ofxNetworkSyncUdpSender") << "Lost connection unexpectedly";
 			break;
 		}
 		if(! bSending){
 			lastSendTime = ofGetElapsedTimeMillis();
-			ofLogVerbose("ofxNetworkSyncLatencyCalibrator") << "Sending Timestamp: " << lastSendTime;
+			ofLogVerbose("ofxNetworkSyncUdpSender") << "Sending Timestamp: " << lastSendTime;
 			string messSend = UDP_MESSAGE_SEND+ofToString(lastSendTime);
 			udpSend.Send(messSend.c_str(), messSend.length());
 			bSending = true;
-			ofSleepMillis(10);
-		}else if(lastSendTime+1000 < ofGetElapsedTimeMillis()){
-			ofLogNotice("ofxNetworkSyncLatencyCalibrator") << "Timeout!!";
+			//ofSleepMillis(10);
+		}
+		if(lastSendTime+1000 < ofGetElapsedTimeMillis()){
+			ofLogNotice("ofxNetworkSyncUdpSender") << "Timeout!!";
 			bSending = false;
-		}else{
+		}
+		if(bSending){
 			udpRecv.Receive(messRecv, messLength);
 			string strMessRecv = messRecv;
 			if(strMessRecv.length() > 0){
 				if(strMessRecv.find(UDP_MESSAGE_REPLY) == 0){
 					int recvTime = ofToInt(strMessRecv.substr(UDP_MESSAGE_REPLY.length()));
-					ofLogVerbose("ofxNetworkSyncLatencyCalibrator") << "Received Reply: " << strMessRecv;
+					ofLogVerbose("ofxNetworkSyncUdpSender") << "Received Reply: " << strMessRecv;
 					if(recvTime > 0 && recvTime == lastSendTime){
 						latencies.push_back((ofGetElapsedTimeMillis() - lastSendTime)*0.5);
-						ofLogVerbose("ofxNetworkSyncLatencyCalibrator") << "Latency: " << latencies.back();
+						ofLogVerbose("ofxNetworkSyncUdpSender") << "Latency: " << latencies.back();
 						bSending = false;
 						if(latencies.size() >= numMeasurement){
-							ofNotifyEvent(finishMeasuremnt, this);
-							close();
+							bFinishMeasurement = true;
+							break;
 						}
 					}
 				}
 			}
 		}
 	}
+	closeConnection();
 }
 
 // ====================================================================================
@@ -139,7 +149,7 @@ bool ofxNetworkSyncUdpResponder::setup(string host, int recvPort, int sendPort){
 }
 float ofxNetworkSyncUdpResponder::getTimeDifference(){
 	if(getTimeDifferenceLogCount() < 2){
-		ofLogError("ofxNetworkSyncLatencyCalibrator") << "Data is not enough... " << getTimeDifferenceLogCount();
+		ofLogError("ofxNetworkSyncUdpResponder") << "Data is not enough... " << getTimeDifferenceLogCount();
 		return 0;
 	}
 	
@@ -161,8 +171,8 @@ void ofxNetworkSyncUdpResponder::threadedFunction(){
 	
 	while(isThreadRunning()){
 		if(! isConnected()){
-			ofLogError("ofxNetworkSyncLatencyCalibrator") << "Lost connection unexpectedly";
-			close();
+			ofLogError("ofxNetworkSyncUdpResponder") << "Lost connection unexpectedly";
+			closeConnection();
 			break;
 		}
 		
@@ -171,11 +181,11 @@ void ofxNetworkSyncUdpResponder::threadedFunction(){
 		if(strMessRecv.length() > 0){
 			if(strMessRecv.find(UDP_MESSAGE_SEND) == 0){
 				int recvTime = ofToInt(strMessRecv.substr(UDP_MESSAGE_SEND.length()));
-				ofLogVerbose("ofxNetworkSyncLatencyCalibrator") << "Received Timestamp: " << strMessRecv << ", return it.";
+				ofLogVerbose("ofxNetworkSyncUdpResponder") << "Received Timestamp: " << strMessRecv << ", return it.";
 				if(recvTime > 0){
 					int now = ofGetElapsedTimeMillis();
 					timeDifferences.push_back(now-recvTime);
-					ofLogVerbose("ofxNetworkSyncLatencyCalibrator") << "Time difference: " << timeDifferences.back();
+					ofLogVerbose("ofxNetworkSyncUdpResponder") << "Time difference: " << timeDifferences.back();
 					string messSend = UDP_MESSAGE_REPLY+ofToString(recvTime);
 					udpSend.Send(messSend.c_str(), messSend.length());
 				}

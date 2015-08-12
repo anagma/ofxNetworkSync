@@ -14,67 +14,135 @@
 
 class ofxNetworkSyncServerFinder : ofThread{
 	ofxUDPManager udpSend, udpRecv;
-	long long startTimeMillis, lastTryTimeMillis;
-public:
-	ofEvent<IpAndPort> serverFound;
+	long long startTimeMillis;
 	
+	bool bServerFound;
+	IpAndPort serverIpAndPort;
+	
+	
+public:
+	//ofEvent<IpAndPort> serverFound;
+	
+	
+	~ofxNetworkSyncServerFinder(){
+		close();
+	}
+
+	// ======================================================
 	bool setup(int sendPort=FINDER_SEND_PORT_DEFAULT, int recvPort=FINDER_RESPOND_PORT_DEFAULT){
+		close();
+
+		bool bConnected = false;
 		if(udpSend.Create() &&
 		   udpSend.SetEnableBroadcast(true) &&
 		   udpSend.Connect("255.255.255.255", sendPort)){
+			bConnected = true;
 		}else{
-			ofLogError("ofxNetworkSyncServerFinder") << "failed to connect to port: " << sendPort;
-			return false;
+			ofLogError("ofxNetworkSyncServerFinder") << "FAILED TO CONNECT TO PORT: " << sendPort;
+			bConnected = false;
 		}
 		if(udpRecv.Create() &&
 		   udpRecv.Bind(recvPort) &&
 		   udpRecv.SetNonBlocking(true)
 		   ){
+			bConnected = true;
 		}else{
-			ofLogError("ofxNetworkSyncServerFinder") << "failed to bind to port: " << recvPort;
+			ofLogError("ofxNetworkSyncServerFinder") << "FAILED BIND TO PORT: " << recvPort;
+			bConnected = false;
+		}
+		
+		if(bConnected){
+			ofLogVerbose("ofxNetworkSyncServerFinder") << "CONNECTED" << endl;
+			startTimeMillis = 0;
+			bServerFound = false;
+			if(! isThreadRunning()){
+				ofLogVerbose("ofxNetworkSyncServerFinder") << "START THREAD!!" << endl;
+				startThread(true);
+			}
+			return true;
+		}else{
+			close();
 			return false;
 		}
-		ofLogVerbose("ofxNetworkSyncServerFinder") << "server finder connect!" << endl;
-		startThread(true);
-		lastTryTimeMillis = startTimeMillis = 0;
-		return true;
 	}
+	
+	// ======================================================
 	void close(){
-		ofLogVerbose("ofxNetworkSyncServerFinder") << "closing server finder" << endl;
-		stopThread();
-		waitForThread();
-		udpSend.Close();
-		udpRecv.Close();
-		ofLogVerbose("ofxNetworkSyncServerFinder") << "server finder closed" << endl;
+		if(isThreadRunning()){
+			ofLogVerbose("ofxNetworkSyncServerFinder") << "STOP THREAD!!" << endl;
+			stopThread();
+			waitForThread(true, 1000);
+			ofLogVerbose("ofxNetworkSyncServerFinder") << "THREAD STOPPED!!" << endl;
+		}
+		if(udpSend.IsConnected()){
+			udpSend.Close();
+			ofLogVerbose("ofxNetworkSyncServerFinder") << "SENDER CLOSED" << endl;
+		}
+		if(udpRecv.IsConnected()){
+			udpRecv.Close();
+			ofLogVerbose("ofxNetworkSyncServerFinder") << "RECEIVER CLOSED" << endl;
+		}
 	}
+	
+	// ======================================================
+	bool doesServerFound(){
+		return bServerFound;
+	}
+	IpAndPort getServerInfo(){
+		return serverIpAndPort;
+	}
+	
+	// ======================================================
+	bool isConnected(){
+		return udpSend.IsConnected() && udpRecv.IsConnected();
+	}
+	
 	bool isRunning(){
 		return isThreadRunning();
 	}
+
 	
 protected:
 	void threadedFunction(){
+		ofLogVerbose("ofxNetworkSyncServerFinder") << "THREAD STARTED";
 		ofSleepMillis(1000);
-		ofLogVerbose("ofxNetworkSyncServerFinder") << "start finding thread";
 		startTimeMillis = ofGetElapsedTimeMillis();
 		while (isThreadRunning()) {
-			int now = ofGetElapsedTimeMillis();
-			lastTryTimeMillis = now;
+			if(! isConnected()){
+				ofLogError("ofxNetworkSyncServerFinder") << "CONNECTION LOST";
+				break;
+			}
+			
+			ofLogVerbose("ofxNetworkSyncServerFinder") << "SENDING HELLO";
 			udpSend.Send(UDP_MESSAGE_HELLO.c_str(), UDP_MESSAGE_HELLO.length());
 			char recv[32];
 			int num = udpRecv.Receive(recv, sizeof(recv));
 			if(num > 0){
-				string strRecv = recv;
-				if(strRecv.find(UDP_MESSAGE_HELLO) == 0){
-					int port = ofToInt(strRecv.substr(UDP_MESSAGE_HELLO.length()+1));
+				ofLogVerbose("ofxNetworkSyncServerFinder") << "MESSAGE RECEIVED: " << recv;
+				istringstream istr(recv);
+				string header;
+				istr >> header;
+				
+				if(header == UDP_MESSAGE_HELLO){
+					ofLogNotice("ofxNetworkSyncServerFinder") << "SERVER FOUND";
+					string strPort;
+					istr >> strPort;
+					int port = ofToInt(strPort);
 					char remoteAddr[16];
 					udpRecv.GetRemoteAddr(remoteAddr);
-					string strRemoteAddr = remoteAddr;
-					IpAndPort info = {strRemoteAddr, port};
-					ofNotifyEvent(serverFound, info, this);
+					serverIpAndPort.ip		= remoteAddr;
+					serverIpAndPort.port	= port;
+					bServerFound = true;
+//					break;
 				}
 			}
 			ofSleepMillis(SERVER_FIND_INTERVAL);
 		}
+//		if(bServerFound){
+//			ofLogNotice("ofxNetworkSyncServerFinder") << "NOTIFY";
+//			ofNotifyEvent(serverFound, serverIpAndPort, this);
+//		}
+		ofLogVerbose("ofxNetworkSyncServerFinder") << "THREAD END";
 	}
 };
 

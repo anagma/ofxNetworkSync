@@ -39,45 +39,24 @@ public:
 	bool setup(string serverIp_, int serverPort_);
 	bool connect();
 	bool close();
-	void drawStatus();
+	void drawStatus(int x=50, int y=50);
 	
 	// network utils
-	int getRemotePort(){
-		client.getPort();
-	}
-	string getRemoteHost(){
-		client.getIP();
-	}
+	int getRemotePort();
+	string getRemoteHost();
 	
 	
-	long long getSyncedElapsedTimeMillis(){
-		if(! isCalibrated()){
-			ofLogWarning("ofxNetworkSyncClient") << "is not calibrated yet..";
-		}
-		return ofGetElapsedTimeMillis() - timeDifference;
-	}
-	float getLatency(){
-		if(! isCalibrated()){
-			ofLogWarning("ofxNetworkSyncClient") << "is not calibrated yet..";
-		}
-		return latency;
-	}
-	long long getSyncedBaseTimeMillis(){
-		if(! isCalibrated()){
-			ofLogWarning("ofxNetworkSyncClient") << "is not calibrated yet..";
-		}
-		return timeDifference;
-	}
+	long long getSyncedElapsedTimeMillis();
+	float getLatency();
+	long long getSyncedBaseTimeMillis();
 
-	bool isConnected(){
-		return client.isConnected();
-	}
-	bool isCalibrated(){
-		return isConnected() && step == CALIBRATED;
-	}
-	bool isCalibrating(){
-		return isConnected() && step == CALIBRATING;
-	}
+	bool isConnected();
+	bool isCalibrated();
+	bool isCalibrating();
+
+	void send(string message);
+	
+	int getClientId();
 protected:
 	void threadedFunction();
 	void onMessageReceived(string & message);

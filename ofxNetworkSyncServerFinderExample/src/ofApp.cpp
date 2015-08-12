@@ -11,18 +11,18 @@ void ofApp::setup(){
 	player.setPan(-1);
 	player.setLoop(false);
 
-	ofAddListener(finder.serverFound, this, &ofApp::onServerFound);
 	finder.setup();
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
-}
-
-void ofApp::onServerFound(IpAndPort & info){
-	finder.close();
-	if(client.setup(info.ip, info.port)){
-		ofAddListener(client.messageReceived, this, &ofApp::onMessageReceived);
+	if(finder.isRunning() && finder.doesServerFound()){
+		finder.close();
+		if(client.setup(finder.getServerInfo().ip, finder.getServerInfo().port)){
+			ofAddListener(client.messageReceived, this, &ofApp::onMessageReceived);
+		}else{
+			ofLogError() << "failed to start client";
+		}
 	}
 }
 void ofApp::onMessageReceived(string & message){

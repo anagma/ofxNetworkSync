@@ -19,7 +19,7 @@ bool ofxNetworkSyncServer::setup(int tcpPort, bool _bAutoCalibration, int _finde
 	
 	bAutoCalibration = _bAutoCalibration;
 	clientStates.clear();
-	tcpLastConnectionID = -1;
+	//tcpLastConnectionID = -1;
 	finderRecvPort = _finderRecvPort;
 	finderSendPort = _finderSendPort;
 	
@@ -28,6 +28,7 @@ bool ofxNetworkSyncServer::setup(int tcpPort, bool _bAutoCalibration, int _finde
 		ofLogVerbose("ofxNetworkSyncServer") << "Server is waiting on port: " << tcpPort;
 		if(finderResponder.Create()){
 			if(finderResponder.Bind(finderRecvPort)){
+				finderResponder.SetNonBlocking(true);
 				ofLogVerbose("ofxNetworkSyncServer") << "Finder Responder is waiting on port: " << finderRecvPort;
 				startThread(true);
 			}else{
@@ -42,18 +43,27 @@ bool ofxNetworkSyncServer::setup(int tcpPort, bool _bAutoCalibration, int _finde
 	}
 }
 void ofxNetworkSyncServer::close(){
-	ofLogVerbose("ofxNetworkSyncServer") << "close server... bye";
-	if(tcpServer != NULL){
-		tcpServer->close();
-		for (auto & state : clientStates) {
-			state->close();
-			delete state;
-		}
-		clientStates.clear();
-		delete tcpServer;
+	if(isThreadRunning()){
+		stopThread();
+		waitForThread();
 	}
-	tcpLastConnectionID = -1;
 	finderResponder.Close();
+//	ofLogVerbose("ofxNetworkSyncServer") << "close server... bye";
+	try{
+		if(tcpServer != NULL){
+			for (auto & state : clientStates) {
+				state->close();
+				delete state;
+			}
+			clientStates.clear();
+			tcpServer->close();
+//			ofSleepMillis(1000);
+//			delete tcpServer;
+		}
+	}catch(const Poco::Exception& exc){
+//		ofLogError() << exc.displayText() << endl;
+	}
+	//tcpLastConnectionID = -1;
 }
 void ofxNetworkSyncServer::update(){
 	if(tcpServer == NULL || ! tcpServer->isConnected() || tcpServer->getLastID() <= 0){
@@ -61,25 +71,52 @@ void ofxNetworkSyncServer::update(){
 		return;
 	}
 	
-	if(tcpLastConnectionID != tcpServer->getLastID()){
-		int clientId = tcpServer->getLastID()-1;
-		ofLogVerbose("ofxNetworkSyncServer") << "New Connection established: #"<< clientId << " " << tcpServer->getClientIP(clientId) << ":" << tcpServer->getClientPort(clientId);
-		// new connection
-		clientStates.push_back(new ofxNetworkSyncClientState(this, tcpServer, clientId));
-		ofNotifyEvent(newClientConnected, clientId, this);
-		
-		tcpLastConnectionID = tcpServer->getLastID();
-		
-		// New Client will be calibrated automatically.
-		if(bAutoCalibration){
-			ofLogVerbose("ofxNetworkSyncServer") << "Client#" << clientId << " : Start Calibration";
-			clientStates.back()->startCalibration();
+	
+	// connection check
+	for(int i=0; i<tcpServer->getLastID(); i++){
+		if(tcpServer->isClientConnected(i)){
+			bool bAlreadyConnected = false;
+			for(auto & s : clientStates){
+				if(s->getClientID() == i){
+					bAlreadyConnected = true;
+					break;
+				}
+			}
+			if(! bAlreadyConnected){
+				ofLogVerbose("ofxNetworkSyncServer") << "New Connection established: #"<< i << " " << tcpServer->getClientIP(i) << ":" << tcpServer->getClientPort(i);
+				// new connection
+				clientStates.push_back(new ofxNetworkSyncClientState(this, tcpServer, i));
+				ofAddListener(clientStates.back()->clientDisconnected, this, &ofxNetworkSyncServer::onClientDisconnected);
+				ofNotifyEvent(newClientConnected, i, this);
+				// New Client will be calibrated automatically.
+				if(bAutoCalibration){
+					ofLogVerbose("ofxNetworkSyncServer") << "Client#" << i << " : Start Calibration";
+					clientStates.back()->startCalibration();
+				}
+			}
 		}
-		//			ofNotifyEvent(newClientComming, clientStates.back(), this);
 	}
+	
+	
+//	if(tcpLastConnectionID != tcpServer->getLastID()){
+//		int clientId = tcpServer->getLastID()-1;
+//		ofLogVerbose("ofxNetworkSyncServer") << "New Connection established: #"<< clientId << " " << tcpServer->getClientIP(clientId) << ":" << tcpServer->getClientPort(clientId);
+//		// new connection
+//		clientStates.push_back(new ofxNetworkSyncClientState(this, tcpServer, clientId));
+//		ofNotifyEvent(newClientConnected, clientId, this);
+//		
+//		tcpLastConnectionID = tcpServer->getLastID();
+//		
+//		// New Client will be calibrated automatically.
+//		if(bAutoCalibration){
+//			ofLogVerbose("ofxNetworkSyncServer") << "Client#" << clientId << " : Start Calibration";
+//			clientStates.back()->startCalibration();
+//		}
+//		//			ofNotifyEvent(newClientComming, clientStates.back(), this);
+//	}
 }
 
-void ofxNetworkSyncServer::drawStatus(){
+void ofxNetworkSyncServer::drawStatus(int x, int y){
 	ostringstream ostr("");
 	
 	if(tcpServer != NULL && tcpServer->isConnected()){
@@ -98,7 +135,7 @@ void ofxNetworkSyncServer::drawStatus(){
 			}else if(c->isCalibrating()){
 				ostr << "CALIBRATING";
 			}else if(c->isCalibrated()){
-				ostr << "CALIBRATED";
+				ostr << "CALIBRATED" << endl;
 			}else{
 				ostr << "NOT CALIBRATED";
 			}
@@ -108,8 +145,10 @@ void ofxNetworkSyncServer::drawStatus(){
 		ostr << "Here is no clients." << endl;
 	}
 	
+	ostr << "now:" << getSyncedElapsedTimeMillis();
+	
 	ofSetColor(255);
-	ofDrawBitmapString(ostr.str(), 50, 50);
+	ofDrawBitmapString(ostr.str(), x, y);
 }
 
 void ofxNetworkSyncServer::onClientMessageReceived(int clientId, string message){
@@ -118,7 +157,7 @@ void ofxNetworkSyncServer::onClientMessageReceived(int clientId, string message)
 }
 void ofxNetworkSyncServer::threadedFunction(){
 	if(tcpServer != NULL){
-		while(isThreadRunning()){
+		while(isThreadRunning() && finderResponder.IsConnected()){
 			char recv[16];
 			int num = finderResponder.Receive(recv, sizeof(recv));
 			if(num > 0){
@@ -135,6 +174,60 @@ void ofxNetworkSyncServer::threadedFunction(){
 					}
 				}
 			}
+			ofSleepMillis(10);
 		}
 	}
+}
+
+void ofxNetworkSyncServer::setTimeOffsetMillis(long long _timeOffset){
+	timeOffset = _timeOffset;
+}
+
+long long ofxNetworkSyncServer::getSyncedElapsedTimeMillis(){
+	return ofGetElapsedTimeMillis()+timeOffset;
+}
+long long ofxNetworkSyncServer::getTimeOffsetMillis(){
+	return timeOffset;
+}
+
+vector<ofxNetworkSyncClientState *> & ofxNetworkSyncServer::getClients(){
+	return clientStates;
+}
+
+void ofxNetworkSyncServer::setAutoCalibration(bool b){
+	bAutoCalibration = b;
+}
+bool ofxNetworkSyncServer::getAutoCalibration(){
+	return bAutoCalibration;
+}
+bool ofxNetworkSyncServer::isConnected(){
+	if(tcpServer == NULL){
+		return false;
+	}
+	return tcpServer->isConnected();
+}
+bool ofxNetworkSyncServer::hasClients(){
+	return clientStates.size() > 0;
+}
+
+
+void ofxNetworkSyncServer::onClientDisconnected(int & clientId){
+	for(vector<ofxNetworkSyncClientState *>::iterator it = clientStates.begin(); it != clientStates.end(); ){
+		ofxNetworkSyncClientState * s = *it;
+		if(s->getClientID() == clientId){
+			delete s;
+			it = clientStates.erase(it);
+		}else{
+			it++;
+		}
+	}
+}
+
+
+
+void ofxNetworkSyncServer::startRecalibration(){
+	for (auto & state : clientStates) {
+		state->startCalibration();
+	}
+	
 }

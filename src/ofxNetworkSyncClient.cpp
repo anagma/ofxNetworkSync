@@ -13,9 +13,7 @@ ofxNetworkSyncClient::ofxNetworkSyncClient() : ofThread(){
 	step = WAIT;
 }
 ofxNetworkSyncClient::~ofxNetworkSyncClient(){
-	if(client.isConnected()){
-		client.close();
-	}
+	close();
 }
 
 bool ofxNetworkSyncClient::setup(string serverIp_, int serverPort_){
@@ -37,11 +35,17 @@ bool ofxNetworkSyncClient::connect(){
 }
 bool ofxNetworkSyncClient::close(){
 	ofLogVerbose("ofxNetworkSyncClient") << "Close connection";
-	stopThread();
-	return client.close();
+	if(isThreadRunning()){
+		stopThread();
+		waitForThread(1000, true);
+	}
+	if(client.isConnected()){
+		return client.close();
+	}
+	return true;
 }
 
-void ofxNetworkSyncClient::drawStatus(){
+void ofxNetworkSyncClient::drawStatus(int x, int y){
 	ostringstream ostr("");
 	
 	if(isConnected()){
@@ -49,12 +53,16 @@ void ofxNetworkSyncClient::drawStatus(){
 		switch (step) {
 			case WAIT:
 				ostr << "NOT CALIBRATED" << endl;
+				ostr << endl;
+				ostr << endl;
 				break;
 			case CALIBRATING:
 				ostr << "CALIBRATING NOW" << endl;
 				for(auto & c : calibrator.getTimeDifferences()){
 					ostr << "differences:" << c << endl;
 				}
+				ostr << endl;
+				ostr << endl;
 				break;
 			case CALIBRATED:
 				ostr << "CALIBRATED" << endl;
@@ -68,10 +76,11 @@ void ofxNetworkSyncClient::drawStatus(){
 	}else{
 		ostr << "Client is not connected." << endl;
 	}
+	ostr << "now: " << getSyncedElapsedTimeMillis() << endl;
 	
 	
 	ofSetColor(255);
-	ofDrawBitmapString(ostr.str(), 50, 50);
+	ofDrawBitmapString(ostr.str(), x, y);
 }
 
 void ofxNetworkSyncClient::threadedFunction(){
@@ -83,6 +92,7 @@ void ofxNetworkSyncClient::threadedFunction(){
 			}
 		}else{
 			ofNotifyEvent(connectionLost, this);
+			break;
 		}
 		ofSleepMillis(10);
 	}
@@ -112,9 +122,60 @@ void ofxNetworkSyncClient::onMessageReceived(string & message){
 		timeDifference = round(calibrator.getTimeDifference() - latency);
 		ofLogVerbose("ofxNetworkSyncClient") << "time difference calicurated: " << timeDifference;
 		ofLogVerbose("ofxNetworkSyncClient") << "done calibration";
-		
+
 		ofNotifyEvent(calibrated, this);
 		
 		step = CALIBRATED;
+		
+	}else if(message.find(MESSAGE_HEADER_TIME_OFFSET) == 0){
+		int timeOffset = ofToInt(message.substr(MESSAGE_HEADER_TIME_OFFSET.length()+1));
+		ofLogVerbose("ofxNetworkSyncClient") << "time offset received:" << timeOffset;
+		timeDifference -= timeOffset;
+		ofLogVerbose("ofxNetworkSyncClient") << "calculated time difference:" << timeDifference;
 	}
+}
+
+
+
+int ofxNetworkSyncClient::getRemotePort(){
+	client.getPort();
+}
+string ofxNetworkSyncClient::getRemoteHost(){
+	client.getIP();
+}
+
+
+long long ofxNetworkSyncClient::getSyncedElapsedTimeMillis(){
+	if(! isCalibrated()){
+		ofLogWarning("ofxNetworkSyncClient") << "is not calibrated yet..";
+	}
+	return ofGetElapsedTimeMillis() - timeDifference;
+}
+float ofxNetworkSyncClient::getLatency(){
+	if(! isCalibrated()){
+		ofLogWarning("ofxNetworkSyncClient") << "is not calibrated yet..";
+	}
+	return latency;
+}
+long long ofxNetworkSyncClient::getSyncedBaseTimeMillis(){
+	if(! isCalibrated()){
+		ofLogWarning("ofxNetworkSyncClient") << "is not calibrated yet..";
+	}
+	return timeDifference;
+}
+
+bool ofxNetworkSyncClient::isConnected(){
+	return client.isConnected();
+}
+bool ofxNetworkSyncClient::isCalibrated(){
+	return step == CALIBRATED;
+}
+bool ofxNetworkSyncClient::isCalibrating(){
+	return isConnected() && step == CALIBRATING;
+}
+int ofxNetworkSyncClient::getClientId(){
+	return clientId;
+}
+void ofxNetworkSyncClient::send(string message){
+	client.send(message);
 }

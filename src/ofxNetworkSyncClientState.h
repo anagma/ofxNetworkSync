@@ -33,6 +33,7 @@ class ofxNetworkSyncClientState : ofThread{
 	
 public:
 	ofEvent<string> messageReceived;
+	ofEvent<int> clientDisconnected;
 
 	ofxNetworkSyncClientState(ofxNetworkSyncServer * _server, ofxTCPServer * tcpServer_, const int clientId_);
 	~ofxNetworkSyncClientState();
@@ -42,25 +43,13 @@ public:
 	bool close();
 	void send(string message);
 	
-	bool isConnected(){
-		return tcpServer->isClientConnected(clientId);
-	}
+	bool isConnected();
 	
-	bool isCalibrated(){
-		return isConnected() && step == CALIBRATED;
-	}
-	bool isCalibrating(){
-		return isConnected() && calibrator.isRunning();
-	}
-	string getIpAddr(){
-		return ip;
-	}
-	int getPort(){
-		return port;
-	}
-	int getClientID(){
-		return clientId;
-	}
+	bool isCalibrated();
+	bool isCalibrating();
+	string getIpAddr();
+	int getPort();
+	int getClientID();
 	
 protected:
 	void threadedFunction();
