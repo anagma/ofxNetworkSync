@@ -57,7 +57,9 @@ public:
 	void send(string message);
 	
 	int getClientId();
+	void startRecalibration();
 protected:
+	void startCalibration();
 	void threadedFunction();
 	void onMessageReceived(string & message);
 };

@@ -90,7 +90,7 @@ float ofxNetworkSyncUdpSender::getLatency(){
 	return result;
 }
 void ofxNetworkSyncUdpSender::threadedFunction(){
-	ofSleepMillis(1000);
+	ofSleepMillis(100);
 	
 	const int messLength = 32;
 	

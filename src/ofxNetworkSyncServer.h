@@ -51,6 +51,8 @@ public:
 protected:
 	ofxTCPServer * tcpServer;
 	ofxUDPManager finderResponder;
+	bool bResponderConnected;
+
 	int finderRecvPort;
 	int finderSendPort;
 	//int tcpLastConnectionID;

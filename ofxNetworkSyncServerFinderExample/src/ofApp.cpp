@@ -7,7 +7,7 @@ void ofApp::setup(){
 	ofSetVerticalSync(true);
 	ofSetLogLevel(OF_LOG_VERBOSE);
 	
-	player.loadSound("sound/1085.mp3");
+	player.load("sound/1085.mp3");
 	player.setPan(-1);
 	player.setLoop(false);
 

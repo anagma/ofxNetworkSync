@@ -103,15 +103,7 @@ void ofxNetworkSyncClient::onMessageReceived(string & message){
 		clientId = ofToInt(message.substr(MESSAGE_HEADER_CLIENT_ID.length()+1));
 	}else if(message == MESSAGE_START_REQUEST){
 		ofLogVerbose("ofxNetworkSyncClient") << "start signal received, send responce and prepare";
-		
-		if(calibrator.setup(serverIp, SERVER_SEND_PORT_OFFSET+clientId, SERVER_RECV_PORT_OFFSET+clientId)){
-			step = CALIBRATING;
-			client.send(MESSAGE_START_RESPONCE);
-		}else{
-			step = WAIT;
-			ofLogError("ofxNetworkSyncClient") << "Failed to start calibrator";
-			client.send(MESSAGE_START_FAILED);
-		}
+		startCalibration();
 	}else if(message.find(MESSAGE_HEADER_RESULT) == 0){
 		ofLogVerbose("ofxNetworkSyncClient") << "stop signal received. it seems that calibration is complete.";
 		calibrator.close();
@@ -178,4 +170,17 @@ int ofxNetworkSyncClient::getClientId(){
 }
 void ofxNetworkSyncClient::send(string message){
 	client.send(message);
+}
+void ofxNetworkSyncClient::startRecalibration(){
+	startCalibration();
+}
+void ofxNetworkSyncClient::startCalibration(){
+	if(calibrator.setup(serverIp, SERVER_SEND_PORT_OFFSET+clientId, SERVER_RECV_PORT_OFFSET+clientId)){
+		step = CALIBRATING;
+		client.send(MESSAGE_START_RESPONCE);
+	}else{
+		step = WAIT;
+		ofLogError("ofxNetworkSyncClient") << "Failed to start calibrator";
+		client.send(MESSAGE_START_FAILED);
+	}
 }

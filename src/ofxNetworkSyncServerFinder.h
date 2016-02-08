@@ -32,7 +32,7 @@ public:
 	bool setup(int sendPort=FINDER_SEND_PORT_DEFAULT, int recvPort=FINDER_RESPOND_PORT_DEFAULT){
 		close();
 
-		bool bConnected = false;
+		bConnected = false;
 		if(udpSend.Create() &&
 		   udpSend.SetEnableBroadcast(true) &&
 		   udpSend.Connect("255.255.255.255", sendPort)){
@@ -74,12 +74,10 @@ public:
 			waitForThread(true, 1000);
 			ofLogVerbose("ofxNetworkSyncServerFinder") << "THREAD STOPPED!!" << endl;
 		}
-		if(udpSend.IsConnected()){
-			udpSend.Close();
+		if(udpSend.Close()){
 			ofLogVerbose("ofxNetworkSyncServerFinder") << "SENDER CLOSED" << endl;
 		}
-		if(udpRecv.IsConnected()){
-			udpRecv.Close();
+		if(udpRecv.Close()){
 			ofLogVerbose("ofxNetworkSyncServerFinder") << "RECEIVER CLOSED" << endl;
 		}
 	}
@@ -94,7 +92,7 @@ public:
 	
 	// ======================================================
 	bool isConnected(){
-		return udpSend.IsConnected() && udpRecv.IsConnected();
+		return bConnected;
 	}
 	
 	bool isRunning(){
@@ -128,9 +126,11 @@ protected:
 					string strPort;
 					istr >> strPort;
 					int port = ofToInt(strPort);
-					char remoteAddr[16];
-					udpRecv.GetRemoteAddr(remoteAddr);
-					serverIpAndPort.ip		= remoteAddr;
+//					InetAddr remoteAddr;
+//					string remoteAddr;
+					int pDummy;
+					udpRecv.GetRemoteAddr(serverIpAndPort.ip, pDummy);
+//					serverIpAndPort.ip		= remoteAddr;
 					serverIpAndPort.port	= port;
 					bServerFound = true;
 //					break;
@@ -144,6 +144,8 @@ protected:
 //		}
 		ofLogVerbose("ofxNetworkSyncServerFinder") << "THREAD END";
 	}
+private:
+	bool bConnected;
 };
 
 #endif

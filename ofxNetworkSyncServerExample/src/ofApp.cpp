@@ -7,7 +7,7 @@ void ofApp::setup(){
 	ofSetLogLevel(OF_LOG_VERBOSE);
 	
 	if(server.setup(12345)){
-		player.loadSound("sound/1085.mp3");
+		player.load("sound/1085.mp3");
 		player.setPan(1);
 		player.setLoop(false);
 	}
@@ -20,7 +20,7 @@ void ofApp::update(){
 		server.update();
 		
 		if(server.hasClients()){
-			if (ofGetElapsedTimeMillis()%10000 < lastUpdateTime%10000) {
+			if (ofGetElapsedTimeMillis()%60000 < lastUpdateTime%60000) {
 				bool bPlay = false;
 				for (auto & client : server.getClients()) {
 					if(client->isCalibrated()){

@@ -29,6 +29,7 @@ bool ofxNetworkSyncServer::setup(int tcpPort, bool _bAutoCalibration, int _finde
 		if(finderResponder.Create()){
 			if(finderResponder.Bind(finderRecvPort)){
 				finderResponder.SetNonBlocking(true);
+				bResponderConnected = true;
 				ofLogVerbose("ofxNetworkSyncServer") << "Finder Responder is waiting on port: " << finderRecvPort;
 				startThread(true);
 			}else{
@@ -48,6 +49,7 @@ void ofxNetworkSyncServer::close(){
 		waitForThread();
 	}
 	finderResponder.Close();
+	bResponderConnected = false;
 //	ofLogVerbose("ofxNetworkSyncServer") << "close server... bye";
 	try{
 		if(tcpServer != NULL){
@@ -157,18 +159,19 @@ void ofxNetworkSyncServer::onClientMessageReceived(int clientId, string message)
 }
 void ofxNetworkSyncServer::threadedFunction(){
 	if(tcpServer != NULL){
-		while(isThreadRunning() && finderResponder.IsConnected()){
+		while(isThreadRunning() && bResponderConnected){
 			char recv[16];
 			int num = finderResponder.Receive(recv, sizeof(recv));
 			if(num > 0){
 				string recvMessage = recv;
 				if(recvMessage == UDP_MESSAGE_HELLO){
-					char addr[16];
-					if(finderResponder.GetRemoteAddr(addr)){
+					string addr;
+					int pDummy;
+					if(finderResponder.GetRemoteAddr(addr, pDummy)){
 						ofxUDPManager responder;
 						string sendMessage = UDP_MESSAGE_HELLO + " " + ofToString(tcpServer->getPort());
 						responder.Create();
-						responder.Connect(addr, finderSendPort);
+						responder.Connect(addr.c_str(), finderSendPort);
 						responder.Send(sendMessage.c_str(), sendMessage.length());
 						responder.Close();
 					}

@@ -7,10 +7,10 @@ void ofApp::setup(){
 	ofSetVerticalSync(true);
 	ofSetLogLevel(OF_LOG_VERBOSE);
 	
-	if(client.setup("localhost", 12345)){
+	if(client.setup("192.168.1.19", 12345)){
 		ofAddListener(client.messageReceived, this, &ofApp::onMessageComing);
 	}
-	player.loadSound("sound/1085.mp3");
+	player.load("sound/1085.mp3");
 	player.setPan(-1);
 	player.setLoop(false);
 

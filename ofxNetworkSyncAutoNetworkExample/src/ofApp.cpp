@@ -6,7 +6,7 @@ void ofApp::setup(){
 	ofSetVerticalSync(true);
 	ofSetLogLevel(OF_LOG_VERBOSE);
 	
-	player.loadSound("sound/1085.mp3");
+	player.load("sound/1085.mp3");
 	player.setLoop(false);
 
 	if(finder.setup()){
