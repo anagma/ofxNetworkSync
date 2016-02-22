@@ -12,20 +12,19 @@
 #include "ofMain.h"
 
 class ofSoundPlayerDelayed : public ofSoundPlayer, ofThread{
-	int playTime;
+	int delay;
 	void threadedFunction(){
-		int delay = playTime - ofGetElapsedTimeMillis();
 		ofSleepMillis(delay);
 		play();
 	}
 
 public:
-	void play(int delay=0){
-		if(delay <= 0){
+	void play(int delay_=0){
+		if(delay_ <= 0){
 			ofSoundPlayer::play();
 		}else{
 			ofLogVerbose("ofSoundPlayerDelayed") << "play sound after " << delay << " ms.";
-			playTime = ofGetElapsedTimeMillis()+delay;
+			delay = delay_;
 			startThread(true);
 		}
 	}
