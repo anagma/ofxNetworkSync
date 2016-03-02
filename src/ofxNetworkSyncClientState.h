@@ -40,7 +40,7 @@ public:
 
 	void startCalibration();
 	void stopCalibration();
-	bool close();
+	void close();
 	void send(string message);
 	
 	bool isConnected();

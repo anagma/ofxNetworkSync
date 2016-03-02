@@ -130,10 +130,10 @@ void ofxNetworkSyncClient::onMessageReceived(string & message){
 
 
 int ofxNetworkSyncClient::getRemotePort(){
-	client.getPort();
+	return client.getPort();
 }
 string ofxNetworkSyncClient::getRemoteHost(){
-	client.getIP();
+	return client.getIP();
 }
 
 

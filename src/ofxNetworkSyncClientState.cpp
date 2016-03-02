@@ -42,7 +42,7 @@ void ofxNetworkSyncClientState::stopCalibration(){
 }
 
 
-bool ofxNetworkSyncClientState::close(){
+void ofxNetworkSyncClientState::close(){
 	if(isThreadRunning()){
 		stopThread();
 		waitForThread();
