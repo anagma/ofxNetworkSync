@@ -53,6 +53,8 @@ public:
 	
 protected:
 	void threadedFunction();
-	void onMessageReceived(string & message);};
+	void onMessageReceived(string & message);
+	void onClientDisconnect(int clientId); 
+};
 
 #endif

@@ -37,7 +37,7 @@ bool ofxNetworkSyncClient::close(){
 	ofLogVerbose("ofxNetworkSyncClient") << "Close connection";
 	if(isThreadRunning()){
 		stopThread();
-		waitForThread(1000, true);
+		waitForThread();
 	}
 	if(client.isConnected()){
 		return client.close();

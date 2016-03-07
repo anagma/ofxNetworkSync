@@ -14,6 +14,8 @@ ofxNetworkSyncClientState::ofxNetworkSyncClientState(ofxNetworkSyncServer * _ser
 	port = tcpServer->getClientPort(clientId);
 	
 	ofAddListener(messageReceived, this, &ofxNetworkSyncClientState::onMessageReceived);
+	//ofAddListener(clientDisconnected, this, &ofxNetworkSyncClientState::onClientDisconnect);
+	
 	ofLogVerbose("ofxNetworkSyncClientState") << "Client state created. send client id to client and start thread";
 	send(MESSAGE_HEADER_CLIENT_ID+MESSAGE_HEADER_SEPARATOR+ofToString(clientId));
 	step = WAIT;
@@ -90,6 +92,9 @@ void ofxNetworkSyncClientState::onMessageReceived(string & message){
 	}
 }
 
+void ofxNetworkSyncClientState::onClientDisconnect(int clientId) {
+	ofLogVerbose("ofxNetworkSyncClientState#" + ofToString(clientId)) << " disconnected";
+}
 
 
 bool ofxNetworkSyncClientState::isConnected(){
