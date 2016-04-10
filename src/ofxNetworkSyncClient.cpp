@@ -37,7 +37,7 @@ bool ofxNetworkSyncClient::close(){
 	ofLogVerbose("ofxNetworkSyncClient") << "Close connection";
 	if(isThreadRunning()){
 		stopThread();
-		waitForThread(1000, true);
+		waitForThread();
 	}
 	if(client.isConnected()){
 		return client.close();
@@ -130,10 +130,10 @@ void ofxNetworkSyncClient::onMessageReceived(string & message){
 
 
 int ofxNetworkSyncClient::getRemotePort(){
-	client.getPort();
+	return client.getPort();
 }
 string ofxNetworkSyncClient::getRemoteHost(){
-	client.getIP();
+	return client.getIP();
 }
 
 

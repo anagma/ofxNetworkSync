@@ -40,7 +40,7 @@ public:
 
 	void startCalibration();
 	void stopCalibration();
-	bool close();
+	void close();
 	void send(string message);
 	
 	bool isConnected();
@@ -53,6 +53,8 @@ public:
 	
 protected:
 	void threadedFunction();
-	void onMessageReceived(string & message);};
+	void onMessageReceived(string & message);
+	void onClientDisconnect(int clientId); 
+};
 
 #endif
